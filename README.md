@@ -106,6 +106,12 @@ Scopes:
 - bot
 - applications.commands
 
+Permissões do bot:
+- Enviar Mensagens
+- Inserir Links
+- Ver Histórico de Mensagens
+- Inserir Links
+
 ---
 
 # 🧠 Criando API Key Gemini
@@ -182,12 +188,6 @@ Ele já está protegido via `.gitignore`.
 - [ ] Deploy 24h
 - [ ] Painel web
 - [ ] Banco de dados
-
----
-
-# 📜 Licença
-
-MIT License
 
 ---
 
