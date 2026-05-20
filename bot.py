@@ -103,7 +103,7 @@ async def ask(
         ]
 
         embed = discord.Embed(
-            title="🤖 Resposta da IA",
+            title="🤖 Mourão AI Responde:",
             description=partes[0],
             color=discord.Color.blue()
         )
