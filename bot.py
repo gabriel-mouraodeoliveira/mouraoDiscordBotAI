@@ -6,22 +6,18 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-
 load_dotenv()
 
-##dentro do arquivo .env, utilize o Token fornecido ao criar o bot no discord.
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-##dentro do arquivo .env, utilize a chave criada da API da IA que escolheu, 
-##Neste projeto, estamos utilizando a API do GEMINI.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-## aqui você utiliza o modelo de IA da Google que preferir.
 model = genai.GenerativeModel(
-    "models/gemini-3.1-flash-lite"
+    "models/gemini-2.5-flash"
 )
 
+# Memória das conversas
 memoria_conversas = {}
 
 intents = discord.Intents.default()
@@ -34,6 +30,7 @@ bot = commands.Bot(
 
 @bot.event
 async def on_ready():
+
     try:
         synced = await bot.tree.sync()
 
@@ -43,14 +40,29 @@ async def on_ready():
     except Exception as erro:
         print(erro)
 
+# =========================
+# /ping
+# =========================
+
 @bot.tree.command(
     name="ping",
     description="Testa se o bot está online"
 )
 async def ping(interaction: discord.Interaction):
-    await interaction.response.send_message(
-        "Pong! 🚀"
+
+    embed = discord.Embed(
+        title="🏓 Pong!",
+        description="Bot online e funcionando.",
+        color=discord.Color.green()
     )
+
+    await interaction.response.send_message(
+        embed=embed
+    )
+
+# =========================
+# /ask
+# =========================
 
 @bot.tree.command(
     name="ask",
@@ -63,6 +75,7 @@ async def ask(
     interaction: discord.Interaction,
     pergunta: str
 ):
+
     await interaction.response.defer()
 
     try:
@@ -79,6 +92,11 @@ async def ask(
             "parts": [pergunta]
         })
 
+        # Limita memória às últimas 10 mensagens
+        if len(historico) > 10:
+            historico = historico[-10:]
+            memoria_conversas[usuario_id] = historico
+
         chat = model.start_chat(
             history=historico
         )
@@ -94,16 +112,13 @@ async def ask(
             "parts": [texto]
         })
 
-        # if len(texto) > 1900:
-        #     texto = texto[:1900] + "..."
-
         partes = [
             texto[i:i+3900]
             for i in range(0, len(texto), 3900)
         ]
 
         embed = discord.Embed(
-            title="🤖 Mourão AI Responde:",
+            title="🤖 Resposta da IA",
             description=partes[0],
             color=discord.Color.blue()
         )
@@ -122,18 +137,9 @@ async def ask(
             embed=embed
         )
 
-    except Exception as erro:
-        embed = discord.Embed(
-            title="❌ Erro",
-            description=str(erro),
-            color=discord.Color.red()
-        )
-
-        await interaction.followup.send(
-        embed=embed
-        )
-
+        # Continua enviando partes extras se necessário
         for parte in partes[1:]:
+
             extra_embed = discord.Embed(
                 description=parte,
                 color=discord.Color.blue()
@@ -142,6 +148,22 @@ async def ask(
             await interaction.channel.send(
                 embed=extra_embed
             )
+
+    except Exception as erro:
+
+        embed = discord.Embed(
+            title="❌ Erro",
+            description=str(erro),
+            color=discord.Color.red()
+        )
+
+        await interaction.followup.send(
+            embed=embed
+        )
+
+# =========================
+# /reset
+# =========================
 
 @bot.tree.command(
     name="reset",
@@ -166,7 +188,11 @@ async def reset(
         embed=embed
     )
 
-    @bot.tree.command(
+# =========================
+# /dm
+# =========================
+
+@bot.tree.command(
     name="dm",
     description="Envia mensagem privada para um usuário"
 )
@@ -211,7 +237,7 @@ async def dm(
             ephemeral=True
         )
 
-    except Exception as erro:
+    except Exception:
 
         embed_erro = discord.Embed(
             title="❌ Erro ao enviar DM",
@@ -226,5 +252,5 @@ async def dm(
             embed=embed_erro,
             ephemeral=True
         )
-            
+
 bot.run(DISCORD_TOKEN)
