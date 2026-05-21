@@ -165,5 +165,66 @@ async def reset(
     await interaction.response.send_message(
         embed=embed
     )
+
+    @bot.tree.command(
+    name="dm",
+    description="Envia mensagem privada para um usuário"
+)
+@app_commands.describe(
+    usuario="Usuário que receberá a mensagem",
+    mensagem="Mensagem que será enviada"
+)
+async def dm(
+    interaction: discord.Interaction,
+    usuario: discord.Member,
+    mensagem: str
+):
+
+    await interaction.response.defer(
+        ephemeral=True
+    )
+
+    try:
+
+        embed_dm = discord.Embed(
+            title="📩 Nova mensagem",
+            description=mensagem,
+            color=discord.Color.blurple()
+        )
+
+        embed_dm.set_footer(
+            text=f"Enviado por {interaction.user.name}"
+        )
+
+        await usuario.send(
+            embed=embed_dm
+        )
+
+        embed_confirmacao = discord.Embed(
+            title="✅ Mensagem enviada",
+            description=f"DM enviada para {usuario.mention}",
+            color=discord.Color.green()
+        )
+
+        await interaction.followup.send(
+            embed=embed_confirmacao,
+            ephemeral=True
+        )
+
+    except Exception as erro:
+
+        embed_erro = discord.Embed(
+            title="❌ Erro ao enviar DM",
+            description=(
+                "Não foi possível enviar a mensagem.\n"
+                "O usuário pode estar com DMs fechadas."
+            ),
+            color=discord.Color.red()
+        )
+
+        await interaction.followup.send(
+            embed=embed_erro,
+            ephemeral=True
+        )
             
 bot.run(DISCORD_TOKEN)
