@@ -1,4 +1,5 @@
 import os
+import json
 
 import discord
 from discord import app_commands
@@ -17,8 +18,47 @@ model = genai.GenerativeModel(
     "models/gemini-2.5-flash"
 )
 
+# =========================
 # Memória das conversas
+# =========================
+
 memoria_conversas = {}
+
+# =========================
+# Função de DM automática
+# =========================
+
+async def enviar_dm_por_nome(
+    interaction,
+    nome_usuario,
+    mensagem
+):
+
+    for membro in interaction.guild.members:
+
+        if membro.name.lower() == nome_usuario.lower():
+
+            embed_dm = discord.Embed(
+                title="📩 Nova mensagem",
+                description=mensagem,
+                color=discord.Color.blurple()
+            )
+
+            embed_dm.set_footer(
+                text=f"Enviado por {interaction.user.name}"
+            )
+
+            await membro.send(
+                embed=embed_dm
+            )
+
+            return membro
+
+    return None
+
+# =========================
+# Configuração Discord
+# =========================
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -28,10 +68,15 @@ bot = commands.Bot(
     intents=intents
 )
 
+# =========================
+# Evento Ready
+# =========================
+
 @bot.event
 async def on_ready():
 
     try:
+
         synced = await bot.tree.sync()
 
         print(f"Slash commands sincronizados: {len(synced)}")
@@ -92,7 +137,7 @@ async def ask(
             "parts": [pergunta]
         })
 
-        # Limita memória às últimas 10 mensagens
+        # Limita memória
         if len(historico) > 10:
             historico = historico[-10:]
             memoria_conversas[usuario_id] = historico
@@ -101,11 +146,87 @@ async def ask(
             history=historico
         )
 
+        prompt_sistema = f"""
+Você é um assistente Discord.
+
+Quando o usuário pedir para enviar mensagem privada para alguém,
+responda APENAS neste formato JSON:
+
+{{
+  "acao": "dm",
+  "usuario": "NOME",
+  "mensagem": "MENSAGEM"
+}}
+
+Se não for um pedido de ação,
+responda normalmente.
+"""
+
         response = chat.send_message(
-            pergunta
+            prompt_sistema + "\n\nUsuário: " + pergunta
         )
 
         texto = response.text
+
+        # =========================
+        # Tool Calling simples
+        # =========================
+
+        try:
+
+            resposta_json = json.loads(texto)
+
+            if resposta_json.get("acao") == "dm":
+
+                usuario = resposta_json.get("usuario")
+                mensagem = resposta_json.get("mensagem")
+
+                membro = await enviar_dm_por_nome(
+                    interaction,
+                    usuario,
+                    mensagem
+                )
+
+                if membro:
+
+                    embed_tool = discord.Embed(
+                        title="🤖 Ferramenta executada",
+                        description=(
+                            f"Mensagem enviada para "
+                            f"{membro.mention}"
+                        ),
+                        color=discord.Color.green()
+                    )
+
+                    await interaction.followup.send(
+                        embed=embed_tool
+                    )
+
+                    return
+
+                else:
+
+                    embed_tool = discord.Embed(
+                        title="❌ Usuário não encontrado",
+                        description=(
+                            f"Não encontrei "
+                            f"'{usuario}' no servidor."
+                        ),
+                        color=discord.Color.red()
+                    )
+
+                    await interaction.followup.send(
+                        embed=embed_tool
+                    )
+
+                    return
+
+        except:
+            pass
+
+        # =========================
+        # Resposta normal
+        # =========================
 
         historico.append({
             "role": "model",
@@ -137,7 +258,7 @@ async def ask(
             embed=embed
         )
 
-        # Continua enviando partes extras se necessário
+        # Continua enviando partes extras
         for parte in partes[1:]:
 
             extra_embed = discord.Embed(
@@ -252,5 +373,9 @@ async def dm(
             embed=embed_erro,
             ephemeral=True
         )
+
+# =========================
+# Run Bot
+# =========================
 
 bot.run(DISCORD_TOKEN)
