@@ -34,6 +34,75 @@ async def enviar_dm_por_nome(
     mensagem
 ):
 
+    membro_encontrado = None
+
+    # =========================
+    # Detecta mention Discord
+    # =========================
+
+    if nome_usuario.startswith("<@"):
+
+        usuario_id = (
+            nome_usuario
+            .replace("<@", "")
+            .replace(">", "")
+            .replace("!", "")
+        )
+
+        membro_encontrado = interaction.guild.get_member(
+            int(usuario_id)
+        )
+
+    # =========================
+    # Detecta ID puro
+    # =========================
+
+    elif nome_usuario.isdigit():
+
+        membro_encontrado = interaction.guild.get_member(
+            int(nome_usuario)
+        )
+
+    # =========================
+    # Busca por nome normal
+    # =========================
+
+    else:
+
+        for membro in interaction.guild.members:
+
+            if (
+                membro.name.lower()
+                == nome_usuario.lower()
+            ):
+
+                membro_encontrado = membro
+                break
+
+    # =========================
+    # Usuário encontrado
+    # =========================
+
+    if membro_encontrado:
+
+        embed_dm = discord.Embed(
+            title="📩 Nova mensagem",
+            description=mensagem,
+            color=discord.Color.blurple()
+        )
+
+        embed_dm.set_footer(
+            text=f"Enviado por {interaction.user.name}"
+        )
+
+        await membro_encontrado.send(
+            embed=embed_dm
+        )
+
+        return membro_encontrado
+
+    return None
+
     for membro in interaction.guild.members:
 
         if membro.name.lower() == nome_usuario.lower():
