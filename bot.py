@@ -15,7 +15,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
 model = genai.GenerativeModel(
-    "models/gemini-2.5-flash"
+    "Gemini 3.1 Flash Lite"
 )
 
 # =========================
